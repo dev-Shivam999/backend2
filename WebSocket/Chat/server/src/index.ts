@@ -42,8 +42,8 @@ app.post("/Login", async (req: Request, res: Response) => {
         httpOnly: true,
         sameSite: true,
         maxAge: 1000 * 60 * 60 * 24 
-    });
-    res.json("lol")
+    });   
+    res.json("lovl")
 
 
 })
