@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import WebSocket, { WebSocketServer } from "ws";
 import http from "http";
 import cors from "cors";
@@ -12,7 +12,13 @@ AddUser()
 
 const app = express();
 const httpServer = http.createServer(app);
-app.use(cors());
+app.use(cors(
+    {
+        credentials: true,
+        origin: "http://localhost:5173"
+    }
+));
+app.use(express.json())
 
 
 
@@ -25,11 +31,22 @@ interface ExtendedWebSocket extends WebSocket {
     userId?: string;
 }
 
-app.get("/user", async (req, res) => {
+app.get("/user", async (req: Request, res: Response) => {
     const user = await PClient.user.findMany({})
     res.json({ user: user });
 })
 
+app.post("/Login", async (req: Request, res: Response) => {
+    const id = req.body
+    res.cookie("token", id.login, {
+        httpOnly: true,
+        sameSite: true,
+        maxAge: 1000 * 60 * 60 * 24 
+    });
+    res.json("lol")
+
+
+})
 const wss = new WebSocketServer({ server: httpServer });
 
 
@@ -40,6 +57,8 @@ wss.on("connection", (ws: ExtendedWebSocket, req) => {
 
     const user = req.headers.cookie?.split("=")[1]
 
+    console.log("user connect");
+    
 
     if (user) {
 
@@ -49,17 +68,21 @@ wss.on("connection", (ws: ExtendedWebSocket, req) => {
             clients.set(userId, { ws, messageQueue: [] });
 
             ws.userId = userId;
-            
-            
+
+
         }
-        
+        else {
+
+            ex.ws = ws;
+            ws.userId = userId;
 
 
 
-        const clientData = clients.get(userId);
-        if (clientData?.messageQueue.length) {
-            clientData.messageQueue.forEach((message) => ws.send(message));
-            clientData.messageQueue = [];
+
+            if (ex.messageQueue.length) {
+                ex.messageQueue.forEach((message) => ws.send(message));
+                ex.messageQueue = [];
+            }
         }
         ws.send(JSON.stringify({ type: "userId", userId }));
         ws.on("message", (message) => {
@@ -76,6 +99,8 @@ wss.on("connection", (ws: ExtendedWebSocket, req) => {
 
                             targetClientData.ws.send(JSON.stringify({ from: userId, content }));
                         } else {
+                            console.log("gaya");
+                            
 
                             targetClientData?.messageQueue.push(JSON.stringify({ from: userId, content }));
                         }
@@ -94,7 +119,6 @@ wss.on("connection", (ws: ExtendedWebSocket, req) => {
 
         ws.on("close", () => {
             console.log("User disconnected");
-            clients.delete(String(userId));
         });
 
         ws.on("error", (err) => {

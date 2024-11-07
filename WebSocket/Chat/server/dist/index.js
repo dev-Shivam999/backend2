@@ -46,16 +46,30 @@ exports.PClient = new client_1.PrismaClient();
 (0, seed_1.AddUser)();
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    credentials: true,
+    origin: "http://localhost:5173"
+}));
+app.use(express_1.default.json());
 app.get("/user", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield exports.PClient.user.findMany({});
     res.json({ user: user });
+}));
+app.post("/Login", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.body;
+    res.cookie("token", id.login, {
+        httpOnly: true,
+        sameSite: true,
+        maxAge: 1000 * 60 * 60 * 24
+    });
+    res.json("lol");
 }));
 const wss = new ws_1.WebSocketServer({ server: httpServer });
 const clients = new Map();
 wss.on("connection", (ws, req) => {
     var _a;
     const user = (_a = req.headers.cookie) === null || _a === void 0 ? void 0 : _a.split("=")[1];
+    console.log("user connect");
     if (user) {
         const userId = user;
         const ex = clients.get(userId);
@@ -63,10 +77,13 @@ wss.on("connection", (ws, req) => {
             clients.set(userId, { ws, messageQueue: [] });
             ws.userId = userId;
         }
-        const clientData = clients.get(userId);
-        if (clientData === null || clientData === void 0 ? void 0 : clientData.messageQueue.length) {
-            clientData.messageQueue.forEach((message) => ws.send(message));
-            clientData.messageQueue = [];
+        else {
+            ex.ws = ws;
+            ws.userId = userId;
+            if (ex.messageQueue.length) {
+                ex.messageQueue.forEach((message) => ws.send(message));
+                ex.messageQueue = [];
+            }
         }
         ws.send(JSON.stringify({ type: "userId", userId }));
         ws.on("message", (message) => {
@@ -80,6 +97,7 @@ wss.on("connection", (ws, req) => {
                             targetClientData.ws.send(JSON.stringify({ from: userId, content }));
                         }
                         else {
+                            console.log("gaya");
                             targetClientData === null || targetClientData === void 0 ? void 0 : targetClientData.messageQueue.push(JSON.stringify({ from: userId, content }));
                         }
                         ws.send(JSON.stringify({ from: userId, to: targetId, content }));
@@ -96,7 +114,6 @@ wss.on("connection", (ws, req) => {
         });
         ws.on("close", () => {
             console.log("User disconnected");
-            clients.delete(String(userId));
         });
         ws.on("error", (err) => {
             console.error("WebSocket error:", err);
