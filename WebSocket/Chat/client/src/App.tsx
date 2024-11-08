@@ -10,11 +10,14 @@ function App() {
   const [ch, setmessage] = useState<String[]>([])
   useEffect(() => {
     socket.onopen = () => {
+      socket.send(JSON.stringify({ event: "history" }))
       socket.send(JSON.stringify({ event: "connection" }))
     }
-    socket.onmessage = (message: { data: string }) => {
-      console.log('Message received:', message.data);
-      if (message.data != "userConnect") setmessage(ch => [...ch, message.data])
+    socket.onmessage = (message) => {
+      const dom=JSON.parse(message.data)
+      console.log(dom);
+      
+      if (dom?.event != "userConnect"&&dom?.event!="userId" ) setmessage(ch => [...ch, message.data])
 
     }
     return () => socket.close();
@@ -23,7 +26,6 @@ function App() {
   useEffect(() => {
     fetch("http://localhost:8000/user").then((response) => response.json()).then((response) => SetUser(response.user)).catch((error) => console.log(error))
   }, [])
-  console.log(user);
 
   const [login, setLogin] = useState("")
   const L = async (e: React.FormEvent<HTMLFormElement>) => {

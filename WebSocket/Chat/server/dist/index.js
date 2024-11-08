@@ -62,10 +62,11 @@ app.post("/Login", (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         sameSite: true,
         maxAge: 1000 * 60 * 60 * 24
     });
-    res.json("lol");
+    res.json("lovl");
 }));
 const wss = new ws_1.WebSocketServer({ server: httpServer });
 const clients = new Map();
+const ChatHistory = new Map();
 wss.on("connection", (ws, req) => {
     var _a;
     const user = (_a = req.headers.cookie) === null || _a === void 0 ? void 0 : _a.split("=")[1];
@@ -74,33 +75,45 @@ wss.on("connection", (ws, req) => {
         const userId = user;
         const ex = clients.get(userId);
         if (!ex) {
-            clients.set(userId, { ws, messageQueue: [] });
+            const ChatId = userId;
+            clients.set(userId, { ws, ChatId, messageQueue: [] });
             ws.userId = userId;
+            ws.chatId = ChatId;
         }
         else {
             ex.ws = ws;
             ws.userId = userId;
+            ws.chatId = userId;
             if (ex.messageQueue.length) {
-                ex.messageQueue.forEach((message) => ws.send(message));
+                ex.messageQueue.forEach((message) => ws.send(JSON.stringify({ event: "not", data: message })));
                 ex.messageQueue = [];
             }
         }
-        ws.send(JSON.stringify({ type: "userId", userId }));
+        ws.send(JSON.stringify({ event: "userId", userId }));
         ws.on("message", (message) => {
+            var _a, _b;
             try {
                 const parsedMessage = JSON.parse(message.toString());
                 if (parsedMessage.event !== "connection") {
+                    console.log(parsedMessage);
+                    if (parsedMessage.event == "history") {
+                        console.log(ChatHistory.get(ws.chatId), ws.chatId);
+                        (_a = ChatHistory.get(ws.chatId)) === null || _a === void 0 ? void 0 : _a.forEach((message) => ws.send(JSON.stringify({ event: "message", data: message })));
+                    }
                     const { targetId, content } = parsedMessage;
                     if (targetId && clients.has(String(targetId))) {
                         const targetClientData = clients.get(String(targetId));
+                        const ChatId = (_b = clients.get(String(targetId))) === null || _b === void 0 ? void 0 : _b.ChatId;
+                        if (ChatId) {
+                            ChatHistory.set(ChatId, [...(ChatHistory.get(ChatId) || []), content]);
+                        }
                         if ((targetClientData === null || targetClientData === void 0 ? void 0 : targetClientData.ws.readyState) === ws_1.default.OPEN) {
-                            targetClientData.ws.send(JSON.stringify({ from: userId, content }));
+                            targetClientData.ws.send(JSON.stringify({ event: "message", from: userId, data: content }));
                         }
                         else {
-                            console.log("gaya");
                             targetClientData === null || targetClientData === void 0 ? void 0 : targetClientData.messageQueue.push(JSON.stringify({ from: userId, content }));
                         }
-                        ws.send(JSON.stringify({ from: userId, to: targetId, content }));
+                        ws.send(JSON.stringify({ event: "message", from: userId, to: targetId, content }));
                     }
                     else {
                         console.log("No valid target found or targetId not specified.");
