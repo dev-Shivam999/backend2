@@ -97,15 +97,14 @@ wss.on("connection", (ws, req) => {
                 if (parsedMessage.event !== "connection") {
                     console.log(parsedMessage);
                     if (parsedMessage.event == "history") {
-                        console.log(ChatHistory.get(ws.chatId), ws.chatId);
-                        (_a = ChatHistory.get(ws.chatId)) === null || _a === void 0 ? void 0 : _a.forEach((message) => ws.send(JSON.stringify({ event: "message", data: message })));
+                        (_a = ChatHistory.get({ get: ws.chatId, send: parsedMessage.userId })) === null || _a === void 0 ? void 0 : _a.forEach((message) => ws.send(JSON.stringify({ event: "message", data: message })));
                     }
                     const { targetId, content } = parsedMessage;
                     if (targetId && clients.has(String(targetId))) {
                         const targetClientData = clients.get(String(targetId));
                         const ChatId = (_b = clients.get(String(targetId))) === null || _b === void 0 ? void 0 : _b.ChatId;
                         if (ChatId) {
-                            ChatHistory.set(ChatId, [...(ChatHistory.get(ChatId) || []), content]);
+                            ChatHistory.set({ get: String(ws.userId), send: targetId }, [...(ChatHistory.get({ get: String(ws.userId), send: targetId }) || []), content]);
                         }
                         if ((targetClientData === null || targetClientData === void 0 ? void 0 : targetClientData.ws.readyState) === ws_1.default.OPEN) {
                             targetClientData.ws.send(JSON.stringify({ event: "message", from: userId, data: content }));
