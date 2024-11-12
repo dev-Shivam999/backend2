@@ -6,6 +6,9 @@ const app = express()
 mongoose.connect("mongodb://localhost:27017/lol").then(()=>console.log("connect")
 ).catch(()=>console.log("error",))
 
+app.get('/', (req, res) =>{
+    res.json({success:true})
+})
 app.listen(3000,()=>{
     console.log("app listening on 3000");
     
