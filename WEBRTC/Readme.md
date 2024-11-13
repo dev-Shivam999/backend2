@@ -1,5 +1,4 @@
 
-Great question! In WebRTC, STUN, TURN, and signaling servers are key components that help establish peer-to-peer (P2P) connections for audio, video, and data sharing. Here's how each works:
 
 1. STUN Server (Session Traversal Utilities for NAT)
 Purpose: Helps devices discover their public IP address and the type of NAT (Network Address Translation) they’re behind.
