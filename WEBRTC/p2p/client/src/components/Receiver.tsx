@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 
 export const Receiver = () => {
@@ -14,13 +14,14 @@ export const Receiver = () => {
     }, []);
 
     function startReceiving(socket: WebSocket) {
-        const video = document.createElement('video');
-        document.body.appendChild(video);
+       
 
         const pc = new RTCPeerConnection();
         pc.ontrack = (event) => {
-            video.srcObject = new MediaStream([event.track]);
-            video.play();
+         if (videoRef.current) {
+             videoRef.current.srcObject = new MediaStream([event.track]);
+             videoRef.current?.play();
+         }
         }
 
         socket.onmessage = (event) => {
@@ -40,8 +41,9 @@ export const Receiver = () => {
             }
         }
     }
+    const videoRef = useRef<HTMLVideoElement | null>(null)
 
     return <div>
-
+        <video width={400} height={400} ref={videoRef}></video>
     </div>
 }
